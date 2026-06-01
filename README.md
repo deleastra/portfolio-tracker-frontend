@@ -14,7 +14,10 @@ Web app สำหรับ stock portfolio tracker พัฒนาด้วย R
 | Table | [TanStack Table](https://tanstack.com/table) |
 | Charts | [Recharts](https://recharts.org/) |
 | HTTP Client | Axios (พร้อม JWT auto-refresh interceptor) |
-| Styling | [Tailwind CSS v4](https://tailwindcss.com/) |
+| Styling | [Tailwind CSS v4](https://tailwindcss.com/) + [DaisyUI v5](https://daisyui.com/) |
+| UI Components | [shadcn/ui](https://ui.shadcn.com/) (Radix UI primitives + CVA) |
+| Icons | [Lucide React](https://lucide.dev/) |
+| Date Utility | [date-fns](https://date-fns.org/) |
 | Testing | Vitest + Testing Library |
 
 ## Project Structure
@@ -22,16 +25,20 @@ Web app สำหรับ stock portfolio tracker พัฒนาด้วย R
 ```
 src/
 ├── components/
-│   └── layout/
-│       ├── RootLayout.tsx     # Sidebar + ticker bar (authenticated pages)
-│       └── AuthLayout.tsx     # Centered card (login/register pages)
+│   ├── layout/
+│   │   ├── RootLayout.tsx     # Sidebar + dark mode toggle (authenticated pages)
+│   │   └── AuthLayout.tsx     # Centered card (login/register pages)
+│   └── ui/                    # shadcn/ui base components (button, card, badge, dialog, …)
 ├── hooks/
 │   ├── useAuth.ts             # login, register, logout mutations
 │   ├── usePortfolio.ts        # portfolio summary, P&L, performance, metrics
-│   └── useTransactions.ts     # list, create, delete, CSV import
+│   ├── useTransactions.ts     # list, create, delete, CSV import
+│   └── useTheme.ts            # dark/light theme toggle (persisted to localStorage)
 ├── lib/
 │   ├── api.ts                 # axios instance + JWT interceptor + refresh logic
-│   └── apiClient.ts           # typed API functions (authApi, portfolioApi, ฯลฯ)
+│   ├── apiClient.ts           # typed API functions (authApi, portfolioApi, ฯลฯ)
+│   ├── utils.ts               # cn() classname helper (clsx + tailwind-merge)
+│   └── dateUtils.ts           # date formatting helpers (date-fns)
 ├── pages/
 │   ├── LoginPage.tsx
 │   ├── RegisterPage.tsx
@@ -45,6 +52,17 @@ src/
 ├── router.tsx                 # TanStack Router definition + auth guard
 └── main.tsx                   # App entry point (QueryClient + RouterProvider)
 ```
+
+## Theme System
+
+แอปรองรับ **Dark / Light mode** โดยใช้ CSS custom properties (OKLCH color space) + DaisyUI
+
+- ธีม default: Light (hue 220° steel blue)
+- สลับธีมผ่านปุ่มใน Sidebar (ใช้ `useTheme` hook)
+- ค่าถูกเก็บใน `localStorage` และ apply ก่อน first render เพื่อป้องกัน FOUC
+- ตัวแปรสี semantic: `--background`, `--foreground`, `--primary`, `--card`, `--border`, `--muted`, `--destructive`, `--success` ฯลฯ
+- ค่าบวก (กำไร): `text-success` (green hue 150°)
+- ค่าลบ (ขาดทุน): `text-destructive` (red hue 25°)
 
 ## Getting Started
 
