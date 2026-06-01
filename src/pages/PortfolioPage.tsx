@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -8,6 +8,9 @@ import {
   type SortingState,
 } from '@tanstack/react-table'
 import { usePortfolioSummary } from '@/hooks/usePortfolio'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import type { Position } from '@/types'
 
 function fmt(n: number | undefined | null, decimals = 2) {
@@ -24,14 +27,14 @@ function fmtUsd(n: number | undefined | null) {
 
 function PnlCell({ value }: { value: number | undefined | null }) {
   const v = value ?? 0
-  const color = v >= 0 ? 'text-[#34d399]' : 'text-[#f87171]'
-  return <span className={color}>{v >= 0 ? '+' : ''}{fmtUsd(v)}</span>
+  const cls = v >= 0 ? 'text-success' : 'text-destructive'
+  return <span className={cls}>{v >= 0 ? '+' : ''}{fmtUsd(v)}</span>
 }
 
 function PctCell({ value }: { value: number | undefined | null }) {
   const v = value ?? 0
-  const color = v >= 0 ? 'text-[#34d399]' : 'text-[#f87171]'
-  return <span className={color}>{v >= 0 ? '+' : ''}{fmt(v)}%</span>
+  const cls = v >= 0 ? 'text-success' : 'text-destructive'
+  return <span className={cls}>{v >= 0 ? '+' : ''}{fmt(v)}%</span>
 }
 
 const columns: ColumnDef<Position>[] = [
@@ -43,8 +46,8 @@ const columns: ColumnDef<Position>[] = [
       const pos = row.original
       return (
         <div>
-          <div className="font-medium text-[#e8e6f0]">{pos.symbol}</div>
-          <div className="text-xs text-[#5e5c6e] truncate max-w-40">{pos.company_name}</div>
+          <div className="font-medium">{pos.symbol}</div>
+          <div className="text-xs text-muted-foreground truncate max-w-40">{pos.company_name}</div>
         </div>
       )
     },
@@ -52,7 +55,7 @@ const columns: ColumnDef<Position>[] = [
   {
     accessorKey: 'quantity',
     header: 'Qty',
-    cell: ({ getValue }) => <span className="text-[#9997aa]">{fmt(getValue() as number, 5)}</span>,
+    cell: ({ getValue }) => <span className="text-muted-foreground">{fmt(getValue() as number, 5)}</span>,
   },
   {
     accessorKey: 'avg_cost',
@@ -87,7 +90,7 @@ const columns: ColumnDef<Position>[] = [
   {
     accessorKey: 'weight_pct',
     header: 'Weight',
-    cell: ({ getValue }) => <span className="text-[#9997aa]">{fmt(getValue() as number)}%</span>,
+    cell: ({ getValue }) => <span className="text-muted-foreground">{fmt(getValue() as number)}%</span>,
   },
 ]
 
@@ -104,140 +107,116 @@ export function PortfolioPage() {
     getSortedRowModel: getSortedRowModel(),
   })
 
+  const metrics = [
+    { label: 'Total Value', value: isLoading ? null : fmtUsd(data?.total_value ?? 0) },
+    { label: 'Total Cost', value: isLoading ? null : fmtUsd(data?.total_cost ?? 0) },
+    {
+      label: 'Unrealized P&L',
+      value: isLoading ? null : (
+        <>
+          <PnlCell value={data?.total_unrealized_pnl ?? 0} />
+          <span className="text-base ml-2">(<PctCell value={data?.total_unrealized_pnl_pct ?? 0} />)</span>
+        </>
+      ),
+    },
+    {
+      label: 'Realized P&L',
+      value: isLoading ? null : <PnlCell value={data?.total_realized_pnl ?? 0} />,
+    },
+    {
+      label: 'Total P&L',
+      value: isLoading ? null : (
+        <>
+          <PnlCell value={data?.total_pnl ?? 0} />
+          <span className="text-base ml-2">(<PctCell value={data?.total_pnl_pct ?? 0} />)</span>
+        </>
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-6">
-      {/* Hero metrics */}
-      <div className="grid grid-cols-5 gap-4">
-        <div className="bg-[#17171f] border border-[#2e2e3a] rounded-xl p-5">
-          <div className="text-xs text-[#5e5c6e] uppercase tracking-wider mb-2">Total Value</div>
-          <div className="text-2xl font-semibold text-[#e8e6f0]">
-            {isLoading ? '—' : fmtUsd(data?.total_value ?? 0)}
+      {/* Hero metrics — daisyUI stats */}
+      <div className="stats stats-horizontal shadow w-full border border-border bg-card">
+        {metrics.map(({ label, value }) => (
+          <div key={label} className="stat">
+            <div className="stat-title text-xs uppercase tracking-wider">{label}</div>
+            <div className="stat-value text-xl font-semibold text-foreground">
+              {value ?? <Skeleton className="h-6 w-24" />}
+            </div>
           </div>
-        </div>
-        <div className="bg-[#17171f] border border-[#2e2e3a] rounded-xl p-5">
-          <div className="text-xs text-[#5e5c6e] uppercase tracking-wider mb-2">Total Cost</div>
-          <div className="text-2xl font-semibold text-[#e8e6f0]">
-            {isLoading ? '—' : fmtUsd(data?.total_cost ?? 0)}
-          </div>
-        </div>
-        <div className="bg-[#17171f] border border-[#2e2e3a] rounded-xl p-5">
-          <div className="text-xs text-[#5e5c6e] uppercase tracking-wider mb-2">
-            Unrealized P&amp;L
-          </div>
-          <div className="text-2xl font-semibold">
-            {isLoading ? (
-              '—'
-            ) : (
-              <>
-                <PnlCell value={data?.total_unrealized_pnl ?? 0} />
-                <span className="text-base ml-2">
-                  (<PctCell value={data?.total_unrealized_pnl_pct ?? 0} />)
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-        <div className="bg-[#17171f] border border-[#2e2e3a] rounded-xl p-5">
-          <div className="text-xs text-[#5e5c6e] uppercase tracking-wider mb-2">
-            Realized P&amp;L
-          </div>
-          <div className="text-2xl font-semibold">
-            {isLoading ? '—' : <PnlCell value={data?.total_realized_pnl ?? 0} />}
-          </div>
-        </div>
-        <div className="bg-[#17171f] border border-[#2e2e3a] rounded-xl p-5">
-          <div className="text-xs text-[#5e5c6e] uppercase tracking-wider mb-2">Total P&amp;L</div>
-          <div className="text-2xl font-semibold">
-            {isLoading ? '—' : (
-              <>
-                <PnlCell value={data?.total_pnl ?? 0} />
-                <span className="text-base ml-2">
-                  (<PctCell value={data?.total_pnl_pct ?? 0} />)
-                </span>
-              </>
-            )}
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Holdings table */}
-      <div className="bg-[#17171f] border border-[#2e2e3a] rounded-xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#2e2e3a]">
-          <h2 className="text-sm font-medium text-[#e8e6f0]">Holdings</h2>
-        </div>
-        {isError ? (
-          <div className="p-6 text-sm text-[#f87171]">Failed to load portfolio data.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium">Holdings</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isError ? (
+            <div className="p-6 text-sm text-destructive">Failed to load portfolio data.</div>
+          ) : (
+            <Table>
+              <TableHeader>
                 {table.getHeaderGroups().map((hg) => (
-                  <tr key={hg.id} className="border-b border-[#2e2e3a]">
+                  <TableRow key={hg.id}>
                     {hg.headers.map((h) => (
-                      <th
+                      <TableHead
                         key={h.id}
-                        className={`px-4 py-3 text-left text-xs text-[#5e5c6e] uppercase tracking-wider font-medium whitespace-nowrap ${h.column.getCanSort() ? 'cursor-pointer select-none hover:text-[#9997aa]' : ''}`}
+                        className={`text-xs uppercase tracking-wider whitespace-nowrap ${h.column.getCanSort() ? 'cursor-pointer select-none hover:text-foreground' : ''}`}
                         onClick={h.column.getToggleSortingHandler()}
                       >
                         <span className="inline-flex items-center gap-1">
                           {flexRender(h.column.columnDef.header, h.getContext())}
                           {h.column.getCanSort() && (
-                            <span className="text-[#3e3e4e]">
+                            <span className="text-muted-foreground/50">
                               {h.column.getIsSorted() === 'asc'
-                                ? '↑'
+                                ? '▲'
                                 : h.column.getIsSorted() === 'desc'
-                                  ? '↓'
-                                  : '↕'}
+                                  ? '▼'
+                                  : '•'}
                             </span>
                           )}
                         </span>
-                      </th>
+                      </TableHead>
                     ))}
-                  </tr>
+                  </TableRow>
                 ))}
-              </thead>
-              <tbody>
+              </TableHeader>
+              <TableBody>
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i} className="border-b border-[#2e2e3a]/50">
+                    <TableRow key={i}>
                       {columns.map((_, ci) => (
-                        <td key={ci} className="px-4 py-3">
-                          <div className="h-4 bg-[#22222e] rounded animate-pulse w-20" />
-                        </td>
+                        <TableCell key={ci}>
+                          <Skeleton className="h-4 w-20" />
+                        </TableCell>
                       ))}
-                    </tr>
+                    </TableRow>
                   ))
                 ) : table.getRowModel().rows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={columns.length}
-                      className="px-4 py-12 text-center text-[#5e5c6e]"
-                    >
+                  <TableRow>
+                    <TableCell colSpan={columns.length} className="py-12 text-center text-muted-foreground">
                       No positions. Import a CSV or add a transaction.
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   table.getRowModel().rows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-b border-[#2e2e3a]/50 hover:bg-[#1e1e28] transition-colors"
-                    >
+                    <TableRow key={row.id}>
                       {row.getVisibleCells().map((cell) => (
-                        <td
-                          key={cell.id}
-                          className="px-4 py-3 text-[#e8e6f0] whitespace-nowrap"
-                        >
+                        <TableCell key={cell.id} className="whitespace-nowrap">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
+                        </TableCell>
                       ))}
-                    </tr>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

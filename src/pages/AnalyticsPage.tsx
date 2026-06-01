@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import {
   LineChart,
   Line,
@@ -11,6 +11,18 @@ import {
 } from 'recharts'
 import { HelpCircle, Settings } from 'lucide-react'
 import { usePerformance, useMetrics, usePnL, usePortfolioSummary } from '@/hooks/usePortfolio'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
 import type { Benchmark, PnLEntry } from '@/types'
 
 interface MetricInfoData {
@@ -101,42 +113,7 @@ const METRIC_INFO: Record<string, MetricInfoData> = {
   },
 }
 
-function MetricPopover({ info, onClose }: { info: MetricInfoData; onClose: () => void }) {
-  const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose()
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [onClose])
-
-  return (
-    <div
-      ref={ref}
-      className="absolute z-50 top-full left-0 mt-2 w-72 bg-[#22222e] border border-[#3a3a4a] rounded-xl shadow-xl p-4 text-xs"
-    >
-      <p className="text-[#c4c2d4] mb-3 leading-relaxed">{info.description}</p>
-      <div className="mb-2">
-        <span className="text-[#5e5c6e] uppercase tracking-wider font-medium">สูตรคำนวณ</span>
-        <p className="text-[#a99ffc] mt-1 font-mono leading-relaxed">{info.formula}</p>
-      </div>
-      <div className="border-t border-[#2e2e3a] pt-2 mt-2 space-y-1">
-        <div className="flex gap-2">
-          <span className="text-[#34d399] font-medium shrink-0">เหมาะสม:</span>
-          <span className="text-[#9997aa]">{info.good}</span>
-        </div>
-        <div className="flex gap-2">
-          <span className="text-[#f87171] font-medium shrink-0">ไม่เหมาะสม:</span>
-          <span className="text-[#9997aa]">{info.bad}</span>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 const BENCHMARKS: { value: Benchmark; label: string }[] = [
   { value: 'SPY', label: 'S&P 500 (SPY)' },
@@ -172,7 +149,6 @@ function MetricCard({ label, value, suffix = '', green }: {
   suffix?: string
   green?: boolean
 }) {
-  const [open, setOpen] = useState(false)
   const info = METRIC_INFO[label]
 
   const fmt = (n: number) =>
@@ -180,32 +156,51 @@ function MetricCard({ label, value, suffix = '', green }: {
 
   const color =
     green === undefined
-      ? 'text-[#e8e6f0]'
+      ? 'text-foreground'
       : green
-      ? 'text-[#34d399]'
-      : 'text-[#f87171]'
+      ? 'text-success'
+      : 'text-destructive'
 
   return (
-    <div className="relative bg-[#17171f] border border-[#2e2e3a] rounded-xl p-5">
-      <div className="flex items-center gap-1 mb-2">
-        <span className="text-xs text-[#5e5c6e] uppercase tracking-wider">{label}</span>
-        {info && (
-          <button
-            onClick={() => setOpen((v) => !v)}
-            className="text-[#3a3a4a] hover:text-[#7c6dfa] transition-colors ml-auto shrink-0"
-            aria-label={`Info about ${label}`}
-          >
-            <HelpCircle size={13} />
-          </button>
-        )}
-      </div>
-      <div className={`text-xl font-semibold ${color}`}>
-        {value === undefined ? '—' : fmt(value) + suffix}
-      </div>
-      {open && info && (
-        <MetricPopover info={info} onClose={() => setOpen(false)} />
-      )}
-    </div>
+    <Card>
+      <CardContent className="p-5">
+        <div className="flex items-center gap-1 mb-2">
+          <span className="text-xs text-muted-foreground uppercase tracking-wider">{label}</span>
+          {info && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className="text-muted-foreground/40 hover:text-primary transition-colors ml-auto shrink-0"
+                  aria-label={`Info about ${label}`}
+                >
+                  <HelpCircle size={13} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 text-xs">
+                <p className="text-foreground mb-3 leading-relaxed">{info.description}</p>
+                <div className="mb-2">
+                  <span className="text-muted-foreground uppercase tracking-wider font-medium">สูตรคำนวณ</span>
+                  <p className="text-primary mt-1 font-mono leading-relaxed">{info.formula}</p>
+                </div>
+                <div className="border-t border-border pt-2 mt-2 space-y-1">
+                  <div className="flex gap-2">
+                    <span className="text-success font-medium shrink-0">เหมาะสม:</span>
+                    <span className="text-muted-foreground">{info.good}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-destructive font-medium shrink-0">ไม่เหมาะสม:</span>
+                    <span className="text-muted-foreground">{info.bad}</span>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
+        <div className={`text-xl font-semibold ${color}`}>
+          {value === undefined ? '—' : fmt(value) + suffix}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -230,97 +225,97 @@ export function AnalyticsPage() {
     <div className="space-y-6">
       {/* Controls */}
       <div className="flex items-center gap-4">
-        <div className="flex gap-1">
+        {/* Range tabs — daisyUI */}
+        <div className="tabs tabs-boxed bg-card border border-border">
           {RANGES.map((r, i) => (
             <button
               key={r.label}
               onClick={() => setRangeIdx(i)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                rangeIdx === i
-                  ? 'bg-[#7c6dfa]/20 text-[#a99ffc]'
-                  : 'text-[#9997aa] hover:bg-[#1e1e28]'
-              }`}
+              className={`tab text-xs ${rangeIdx === i ? 'tab-active' : ''}`}
             >
               {r.label}
             </button>
           ))}
         </div>
-        <select
-          value={benchmark}
-          onChange={(e) => setBenchmark(e.target.value as Benchmark)}
-          className="ml-auto bg-[#22222e] border border-[#2e2e3a] text-[#e8e6f0] text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#7c6dfa]"
-        >
-          {BENCHMARKS.map((b) => (
-            <option key={b.value} value={b.value}>
-              {b.label}
-            </option>
-          ))}
-        </select>
+        <Select value={benchmark} onValueChange={(v) => setBenchmark(v as Benchmark)}>
+          <SelectTrigger className="ml-auto w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {BENCHMARKS.map((b) => (
+              <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Performance Chart */}
-      <div className="bg-[#17171f] border border-[#2e2e3a] rounded-xl p-6">
-        <div className="text-sm font-medium text-[#e8e6f0] mb-4">
-          Cumulative Return vs {BENCHMARKS.find((b) => b.value === benchmark)?.label}
-        </div>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">
+            Cumulative Return vs {BENCHMARKS.find((b) => b.value === benchmark)?.label}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
         {perf.isLoading ? (
-          <div className="h-64 flex items-center justify-center text-[#5e5c6e] text-sm">
-            Loading chart…
+          <div className="h-64 flex items-center justify-center">
+            <Skeleton className="h-64 w-full" />
           </div>
         ) : perf.isError || chartData.length === 0 ? (
-          <div className="h-64 flex items-center justify-center text-[#5e5c6e] text-sm">
+          <div className="h-64 flex items-center justify-center text-muted-foreground text-sm">
             No performance data for this period.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2e2e3a" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis
                 dataKey="date"
-                tick={{ fill: '#5e5c6e', fontSize: 11 }}
+                tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
                 tickLine={false}
-                axisLine={{ stroke: '#2e2e3a' }}
+                axisLine={{ stroke: 'var(--border)' }}
               />
               <YAxis
-                tick={{ fill: '#5e5c6e', fontSize: 11 }}
+                tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v) => `${v}%`}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#22222e',
-                  border: '1px solid #2e2e3a',
+                  backgroundColor: 'var(--popover)',
+                  border: '1px solid var(--border)',
                   borderRadius: 8,
                   fontSize: 12,
-                  color: '#e8e6f0',
+                  color: 'var(--popover-foreground)',
                 }}
                 formatter={(v) => [`${v}%`]}
               />
               <Legend
-                wrapperStyle={{ fontSize: 12, color: '#9997aa', paddingTop: 8 }}
+                wrapperStyle={{ fontSize: 12, color: 'var(--muted-foreground)', paddingTop: 8 }}
               />
               <Line
                 type="monotone"
                 dataKey="Portfolio"
-                stroke="#7c6dfa"
+                stroke="var(--chart-1)"
                 strokeWidth={2}
                 dot={false}
-                activeDot={{ r: 4, fill: '#7c6dfa' }}
+                activeDot={{ r: 4, fill: 'var(--chart-1)' }}
               />
               <Line
                 type="monotone"
                 dataKey="Benchmark"
-                stroke="#9997aa"
+                stroke="var(--chart-2)"
                 strokeWidth={1.5}
                 strokeDasharray="4 2"
                 dot={false}
-                activeDot={{ r: 3, fill: '#9997aa' }}
+                activeDot={{ r: 3, fill: 'var(--chart-2)' }}
               />
             </LineChart>
           </ResponsiveContainer>
         )}
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Metrics grid */}
       <div className="grid grid-cols-3 gap-4 lg:grid-cols-5">
@@ -344,47 +339,47 @@ export function AnalyticsPage() {
       </div>
 
       {/* Benchmark comparison table */}
-      <div className="bg-[#17171f] border border-[#2e2e3a] rounded-xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#2e2e3a] text-sm font-medium text-[#e8e6f0]">
-          Period Comparison
-        </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[#2e2e3a]">
-              <th className="px-4 py-3 text-left text-xs text-[#5e5c6e] uppercase tracking-wider">Period</th>
-              <th className="px-4 py-3 text-right text-xs text-[#5e5c6e] uppercase tracking-wider">Portfolio</th>
-              <th className="px-4 py-3 text-right text-xs text-[#5e5c6e] uppercase tracking-wider">
-                {BENCHMARKS.find((b) => b.value === benchmark)?.label}
-              </th>
-              <th className="px-4 py-3 text-right text-xs text-[#5e5c6e] uppercase tracking-wider">Alpha</th>
-            </tr>
-          </thead>
-          <tbody>
-            {metrics.isLoading
-              ? Array.from({ length: 4 }).map((_, i) => (
-                  <tr key={i} className="border-b border-[#2e2e3a]/50">
-                    {[1, 2, 3, 4].map((ci) => (
-                      <td key={ci} className="px-4 py-3">
-                        <div className="h-4 bg-[#22222e] rounded animate-pulse w-16" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              : RANGES.map((r) => {
-                  const { from: rf, to: rt } = getDateRange(r.months)
-                  return (
-                    <ComparisonRow
-                      key={r.label}
-                      label={r.label}
-                      benchmark={benchmark}
-                      from={rf}
-                      to={rt}
-                    />
-                  )
-                })}
-          </tbody>
-        </table>
-      </div>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium">Period Comparison</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-xs uppercase tracking-wider">Period</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-right">Portfolio</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-right">
+                  {BENCHMARKS.find((b) => b.value === benchmark)?.label}
+                </TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-right">Alpha</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {metrics.isLoading
+                ? Array.from({ length: 4 }).map((_, i) => (
+                    <TableRow key={i}>
+                      {[1, 2, 3, 4].map((ci) => (
+                        <TableCell key={ci}><Skeleton className="h-4 w-16" /></TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                : RANGES.map((r) => {
+                    const { from: rf, to: rt } = getDateRange(r.months)
+                    return (
+                      <ComparisonRow
+                        key={r.label}
+                        label={r.label}
+                        benchmark={benchmark}
+                        from={rf}
+                        to={rt}
+                      />
+                    )
+                  })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {/* Holdings Performance */}
       <HoldingsPerformance />
@@ -412,23 +407,23 @@ function ComparisonRow({
   }
 
   function color(n: number | undefined) {
-    if (n === undefined) return 'text-[#9997aa]'
-    return n >= 0 ? 'text-[#34d399]' : 'text-[#f87171]'
+    if (n === undefined) return 'text-muted-foreground'
+    return n >= 0 ? 'text-success' : 'text-destructive'
   }
 
   return (
-    <tr className="border-b border-[#2e2e3a]/50 hover:bg-[#1e1e28] transition-colors">
-      <td className="px-4 py-3 text-[#9997aa]">{label}</td>
-      <td className={`px-4 py-3 text-right font-medium ${color(data?.total_return_pct)}`}>
+    <TableRow>
+      <TableCell className="text-muted-foreground">{label}</TableCell>
+      <TableCell className={`text-right font-medium ${color(data?.total_return_pct)}`}>
         {fmt(data?.total_return_pct)}
-      </td>
-      <td className={`px-4 py-3 text-right ${color(data?.benchmark_return_pct)}`}>
+      </TableCell>
+      <TableCell className={`text-right ${color(data?.benchmark_return_pct)}`}>
         {fmt(data?.benchmark_return_pct)}
-      </td>
-      <td className={`px-4 py-3 text-right ${color(data?.alpha)}`}>
+      </TableCell>
+      <TableCell className={`text-right ${color(data?.alpha)}`}>
         {fmt(data?.alpha)}
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   )
 }
 
@@ -442,17 +437,6 @@ function HoldingsPerformance() {
   const [showSold, setShowSold] = useState(true)
   const [valueMode, setValueMode] = useState<ValueMode>('percentage')
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const settingsRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
-        setSettingsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
 
   // Build a map of open positions from portfolio summary (has correct current prices)
   const summaryPositionMap = useMemo(() => {
@@ -520,85 +504,79 @@ function HoldingsPerformance() {
   ]
 
   return (
-    <div className="bg-[#17171f] border border-[#2e2e3a] rounded-xl overflow-hidden">
+    <Card>
       {/* Header */}
-      <div className="px-6 py-4 border-b border-[#2e2e3a] flex items-center justify-between">
-        <span className="text-sm font-medium text-[#e8e6f0]">Holdings performance</span>
-        <div className="relative" ref={settingsRef}>
-          <button
-            onClick={() => setSettingsOpen((v) => !v)}
-            className="p-1.5 rounded-lg text-[#5e5c6e] hover:text-[#a99ffc] hover:bg-[#22222e] transition-colors"
-            aria-label="Settings"
-          >
-            <Settings size={15} />
-          </button>
-          {settingsOpen && (
-            <div className="absolute z-50 top-full right-0 mt-2 w-52 bg-[#22222e] border border-[#3a3a4a] rounded-xl shadow-xl p-4 text-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[#c4c2d4]">Display sold</span>
-                <button
-                  onClick={() => setShowSold((v) => !v)}
-                  className={`relative w-9 h-5 rounded-full transition-colors ${showSold ? 'bg-[#7c6dfa]' : 'bg-[#3a3a4a]'}`}
-                  aria-label="Toggle display sold"
-                >
-                  <span
-                    className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${showSold ? 'translate-x-4' : 'translate-x-0.5'}`}
+      <CardHeader className="pb-0">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">Holdings performance</CardTitle>
+          <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Settings">
+                <Settings size={15} />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-52 text-xs" align="end">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-foreground">Display sold</span>
+                  <input
+                    type="checkbox"
+                    className="toggle toggle-primary toggle-sm"
+                    checked={showSold}
+                    onChange={(e) => setShowSold(e.target.checked)}
                   />
-                </button>
+                </div>
+                <div>
+                  <div className="text-muted-foreground uppercase tracking-wider mb-2">Value</div>
+                  {(['absolute', 'percentage'] as ValueMode[]).map((mode) => (
+                    <label key={mode} className="flex items-center gap-2 cursor-pointer py-1">
+                      <input
+                        type="radio"
+                        className="radio radio-primary radio-sm"
+                        checked={valueMode === mode}
+                        onChange={() => setValueMode(mode)}
+                      />
+                      <span className="text-foreground capitalize">
+                        {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
-              <div>
-                <div className="text-[#5e5c6e] uppercase tracking-wider mb-2">Value</div>
-                {(['absolute', 'percentage'] as ValueMode[]).map((mode) => (
-                  <label key={mode} className="flex items-center gap-2 cursor-pointer py-1">
-                    <span
-                      className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-colors ${
-                        valueMode === mode ? 'border-[#7c6dfa] bg-[#7c6dfa]' : 'border-[#5e5c6e]'
-                      }`}
-                    >
-                      {valueMode === mode && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
-                    </span>
-                    <span className="text-[#c4c2d4] capitalize" onClick={() => setValueMode(mode)}>
-                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
+            </PopoverContent>
+          </Popover>
+        </div>
+      </CardHeader>
+
+      {/* Tabs — daisyUI */}
+      <div className="px-6 pt-3 border-b border-border">
+        <div className="tabs">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`tab tab-bordered text-xs ${tab === t.key ? 'tab-active' : ''}`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="px-6 pt-3 flex gap-4 border-b border-[#2e2e3a]">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`pb-2.5 text-xs font-medium border-b-2 transition-colors ${
-              tab === t.key
-                ? 'border-[#7c6dfa] text-[#a99ffc]'
-                : 'border-transparent text-[#5e5c6e] hover:text-[#9997aa]'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
       {/* Bars */}
-      <div className="px-6 py-4">
+      <CardContent className="py-4">
         {pnl.isLoading || summary.isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3 h-6">
-                <div className="w-12 h-4 bg-[#22222e] rounded animate-pulse shrink-0" />
-                <div className="flex-1 h-4 bg-[#22222e] rounded animate-pulse" />
-                <div className="w-16 h-4 bg-[#22222e] rounded animate-pulse shrink-0" />
+                <Skeleton className="w-12 h-4 shrink-0" />
+                <Skeleton className="flex-1 h-4" />
+                <Skeleton className="w-16 h-4 shrink-0" />
               </div>
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-10 text-center text-[#5e5c6e] text-sm">No data</div>
+          <div className="py-10 text-center text-muted-foreground text-sm">No data</div>
         ) : (
           <div className="space-y-2">
             {filtered.map((entry) => {
@@ -608,19 +586,19 @@ function HoldingsPerformance() {
               return (
                 <div key={entry.symbol} className="flex items-center gap-3 group">
                   {/* Ticker */}
-                  <div className="w-12 text-right text-xs font-medium text-[#9997aa] shrink-0">
+                  <div className="w-12 text-right text-xs font-medium text-muted-foreground shrink-0">
                     {entry.symbol}
                   </div>
                   {/* Bar track */}
                   <div className="flex-1 h-5 relative">
                     <div
                       className={`absolute top-0 left-0 h-full rounded-sm transition-all ${
-                        isPositive ? 'bg-[#34d399]/80' : 'bg-[#f87171]/80'
+                        isPositive ? 'bg-success/70' : 'bg-destructive/70'
                       }`}
                       style={{ width: `${pct}%` }}
                     />
                     {!entry.is_open && (
-                      <span className="absolute right-0 top-0 h-full flex items-center pr-1 text-[10px] text-[#5e5c6e]">
+                      <span className="absolute right-0 top-0 h-full flex items-center pr-1 text-[10px] text-muted-foreground">
                         closed
                       </span>
                     )}
@@ -628,7 +606,7 @@ function HoldingsPerformance() {
                   {/* Value */}
                   <div
                     className={`w-20 text-right text-xs font-medium shrink-0 ${
-                      isPositive ? 'text-[#34d399]' : 'text-[#f87171]'
+                      isPositive ? 'text-success' : 'text-destructive'
                     }`}
                   >
                     {fmtValue(entry)}
@@ -638,11 +616,11 @@ function HoldingsPerformance() {
             })}
           </div>
         )}
-      </div>
+      </CardContent>
 
       {/* X-axis label */}
       {!pnl.isLoading && !summary.isLoading && filtered.length > 0 && (
-        <div className="px-6 pb-4 flex justify-between text-[10px] text-[#5e5c6e]">
+        <div className="px-6 pb-4 flex justify-between text-[10px] text-muted-foreground">
           <span>0{valueMode === 'percentage' ? '%' : ''}</span>
           <span>
             {valueMode === 'percentage'
@@ -656,6 +634,6 @@ function HoldingsPerformance() {
           </span>
         </div>
       )}
-    </div>
+    </Card>
   )
 }

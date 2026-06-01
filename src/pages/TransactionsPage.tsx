@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+﻿import { useState, useRef } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -7,22 +7,32 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/react-table'
+import { X, Upload, Plus } from 'lucide-react'
 import { useTransactions, useImportCsv, useCreateTransaction, useDeleteTransaction } from '@/hooks/useTransactions'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select'
+import { formatDate } from '@/lib/dateUtils'
 import type { Transaction, CreateTransactionRequest, TransactionAction } from '@/types'
 
 function fmt(n: number, d = 2) {
   return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d })
-}
-
-function fmtDate(raw: string) {
-  const d = new Date(raw)
-  if (isNaN(d.getTime())) return raw
-  const dd = String(d.getDate()).padStart(2, '0')
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const yyyy = d.getFullYear()
-  const hh = String(d.getHours()).padStart(2, '0')
-  const min = String(d.getMinutes()).padStart(2, '0')
-  return `${dd}/${mm}/${yyyy} ${hh}:${min}`
 }
 
 const columns: ColumnDef<Transaction>[] = [
@@ -30,7 +40,7 @@ const columns: ColumnDef<Transaction>[] = [
     accessorKey: 'trade_date',
     header: 'Date',
     cell: ({ getValue }) => (
-      <span className="text-[#9997aa] text-xs">{fmtDate(getValue() as string)}</span>
+      <span className="text-muted-foreground text-xs">{formatDate(getValue() as string)}</span>
     ),
   },
   {
@@ -39,15 +49,9 @@ const columns: ColumnDef<Transaction>[] = [
     cell: ({ getValue }) => {
       const v = getValue() as string
       return (
-        <span
-          className={`text-xs font-medium px-2 py-0.5 rounded ${
-            v === 'BUY'
-              ? 'bg-[#034d34] text-[#34d399]'
-              : 'bg-[#450a0a] text-[#f87171]'
-          }`}
-        >
+        <Badge variant={v === 'BUY' ? 'success' : 'destructive'}>
           {v}
-        </span>
+        </Badge>
       )
     },
   },
@@ -57,8 +61,8 @@ const columns: ColumnDef<Transaction>[] = [
     accessorFn: (r) => r.symbol,
     cell: ({ row }) => (
       <div>
-        <div className="font-medium text-[#e8e6f0]">{row.original.symbol}</div>
-        <div className="text-xs text-[#5e5c6e] truncate max-w-48">{row.original.company_name}</div>
+        <div className="font-medium">{row.original.symbol}</div>
+        <div className="text-xs text-muted-foreground truncate max-w-48">{row.original.company_name}</div>
       </div>
     ),
   },
@@ -84,7 +88,8 @@ const columns: ColumnDef<Transaction>[] = [
   },
   {
     id: 'actions',
-    header: '',
+    header: 'Delete',
+    enableSorting: false,
     accessorFn: (r) => r.id,
     cell: ({ getValue }) => <DeleteButton id={getValue() as string} />,
   },
@@ -93,13 +98,15 @@ const columns: ColumnDef<Transaction>[] = [
 function DeleteButton({ id }: { id: string }) {
   const del = useDeleteTransaction()
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="icon"
       onClick={() => del.mutate(id)}
       disabled={del.isPending}
-      className="text-[#5e5c6e] hover:text-[#f87171] text-xs transition-colors disabled:opacity-50"
+      className="h-7 w-7 text-muted-foreground hover:text-destructive"
     >
-      ✕
-    </button>
+      <X className="h-3.5 w-3.5" />
+    </Button>
   )
 }
 
@@ -147,6 +154,8 @@ export function TransactionsPage() {
   })
 
   const totalPages = data ? Math.ceil(data.total / 20) : 1
+  const buys = data?.data.filter((t) => t.action === 'BUY').length ?? 0
+  const sells = data?.data.filter((t) => t.action === 'SELL').length ?? 0
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -156,7 +165,12 @@ export function TransactionsPage() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    createTx.mutate(form, { onSuccess: () => { setShowForm(false); setForm(EMPTY_FORM) } })
+    createTx.mutate(form, {
+      onSuccess: () => {
+        setShowForm(false)
+        setForm(EMPTY_FORM)
+      },
+    })
   }
 
   const setField = <K extends keyof CreateTransactionRequest>(k: K, v: CreateTransactionRequest[K]) =>
@@ -164,236 +178,230 @@ export function TransactionsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-[#17171f] border border-[#2e2e3a] rounded-xl p-5">
-          <div className="text-xs text-[#5e5c6e] uppercase tracking-wider mb-1">Total Transactions</div>
-          <div className="text-2xl font-semibold text-[#e8e6f0]">{data?.total ?? '—'}</div>
+      {/* Stats — daisyUI stats */}
+      <div className="stats stats-horizontal shadow w-full border border-border bg-card">
+        <div className="stat">
+          <div className="stat-title text-xs uppercase tracking-wider">Total Transactions</div>
+          <div className="stat-value text-xl font-semibold text-foreground">{data?.total ?? '—'}</div>
         </div>
-        <div className="bg-[#17171f] border border-[#2e2e3a] rounded-xl p-5">
-          <div className="text-xs text-[#5e5c6e] uppercase tracking-wider mb-1">Buys</div>
-          <div className="text-2xl font-semibold text-[#34d399]">
-            {data?.data.filter((t) => t.action === 'BUY').length ?? '—'}
-          </div>
+        <div className="stat">
+          <div className="stat-title text-xs uppercase tracking-wider">Buys</div>
+          <div className="stat-value text-xl font-semibold text-success">{buys}</div>
         </div>
-        <div className="bg-[#17171f] border border-[#2e2e3a] rounded-xl p-5">
-          <div className="text-xs text-[#5e5c6e] uppercase tracking-wider mb-1">Sells</div>
-          <div className="text-2xl font-semibold text-[#f87171]">
-            {data?.data.filter((t) => t.action === 'SELL').length ?? '—'}
-          </div>
+        <div className="stat">
+          <div className="stat-title text-xs uppercase tracking-wider">Sells</div>
+          <div className="stat-value text-xl font-semibold text-destructive">{sells}</div>
         </div>
       </div>
 
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex gap-1">
+        {/* Filter group — daisyUI join */}
+        <div className="join">
           {(['', 'BUY', 'SELL'] as const).map((v) => (
             <button
               key={v}
               onClick={() => { setActionFilter(v); setPage(1) }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                actionFilter === v
-                  ? 'bg-[#7c6dfa]/20 text-[#a99ffc]'
-                  : 'text-[#9997aa] hover:bg-[#1e1e28]'
-              }`}
+              className={`join-item btn btn-sm ${actionFilter === v ? 'btn-primary' : 'btn-ghost'}`}
             >
               {v || 'All'}
             </button>
           ))}
         </div>
+
+        {/* Symbol search */}
         <form
-          onSubmit={(e) => { e.preventDefault(); setSymbolFilter(symbolInput.trim().toUpperCase()); setPage(1) }}
+          onSubmit={(e) => {
+            e.preventDefault()
+            setSymbolFilter(symbolInput.trim().toUpperCase())
+            setPage(1)
+          }}
           className="flex gap-1"
         >
-          <input
-            type="text"
+          <Input
             value={symbolInput}
             onChange={(e) => setSymbolInput(e.target.value)}
-            placeholder="Filter asset…"
-            className="bg-[#22222e] border border-[#2e2e3a] rounded-lg px-3 py-1.5 text-xs text-[#e8e6f0] placeholder:text-[#5e5c6e] focus:outline-none focus:border-[#7c6dfa] w-36 transition-colors"
+            placeholder="Filter asset"
+            className="w-36 h-8 text-xs"
           />
           {symbolFilter && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
               onClick={() => { setSymbolFilter(''); setSymbolInput(''); setPage(1) }}
-              className="px-2 py-1.5 text-xs text-[#5e5c6e] hover:text-[#e8e6f0] transition-colors"
             >
-              ✕
-            </button>
+              <X className="h-3.5 w-3.5" />
+            </Button>
           )}
         </form>
+
         <div className="ml-auto flex gap-2">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => fileRef.current?.click()}
             disabled={importCsv.isPending}
-            className="px-3 py-1.5 bg-[#1e1e28] border border-[#2e2e3a] hover:border-[#7c6dfa] text-[#9997aa] hover:text-[#e8e6f0] text-xs rounded-lg transition-colors disabled:opacity-50"
           >
-            {importCsv.isPending ? 'Importing…' : '↑ Import CSV'}
-          </button>
+            <Upload className="h-3.5 w-3.5" />
+            {importCsv.isPending ? 'Importing...' : 'Import CSV'}
+          </Button>
           <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
-          <button
-            onClick={() => setShowForm((v) => !v)}
-            className="px-3 py-1.5 bg-[#7c6dfa] hover:bg-[#9488fb] text-white text-xs rounded-lg transition-colors"
-          >
-            + Add Transaction
-          </button>
+          <Button size="sm" onClick={() => setShowForm(true)}>
+            <Plus className="h-3.5 w-3.5" /> Add Transaction
+          </Button>
         </div>
       </div>
 
-      {/* Import success/error */}
+      {/* Import feedback */}
       {importCsv.isSuccess && (
-        <div className="px-4 py-2 bg-[#034d34] text-[#34d399] text-sm rounded-lg">
-          CSV imported successfully.
-        </div>
+        <div className="alert alert-success text-sm">CSV imported successfully.</div>
       )}
       {importCsv.isError && (
-        <div className="px-4 py-2 bg-[#450a0a] text-[#f87171] text-sm rounded-lg">
-          Import failed. Check the CSV format.
-        </div>
+        <div className="alert alert-error text-sm">Import failed. Check the CSV format.</div>
       )}
 
-      {/* Manual entry form */}
-      {showForm && (
-        <form
-          onSubmit={handleFormSubmit}
-          className="bg-[#17171f] border border-[#2e2e3a] rounded-xl p-6 grid grid-cols-3 gap-4"
-        >
-          <div className="col-span-3 text-sm font-medium text-[#e8e6f0] mb-1">New Transaction</div>
-          {(
-            [
-              { key: 'symbol', label: 'Symbol', type: 'text', placeholder: 'NVDA' },
-              { key: 'company_name', label: 'Company Name', type: 'text', placeholder: 'NVIDIA Corporation' },
-              { key: 'trade_date', label: 'Trade Date', type: 'date' },
-              { key: 'settlement_date', label: 'Settlement Date', type: 'date' },
-              { key: 'quantity', label: 'Quantity', type: 'number', step: 'any' },
-              { key: 'traded_price', label: 'Price', type: 'number', step: 'any' },
-              { key: 'gross_amount', label: 'Gross Amount', type: 'number', step: 'any' },
-              { key: 'commission', label: 'Commission', type: 'number', step: 'any' },
-              { key: 'net_amount', label: 'Net Amount', type: 'number', step: 'any' },
-            ] as const
-          ).map(({ key, label, type, ...rest }) => (
-            <div key={key}>
-              <label className="block text-xs text-[#9997aa] mb-1">{label}</label>
-              <input
-                type={type}
-                value={form[key] as string | number}
-                onChange={(e) =>
-                  setField(
-                    key,
-                    type === 'number' ? parseFloat(e.target.value) || 0 : (e.target.value as never),
-                  )
-                }
-                required
-                {...rest}
-                className="w-full bg-[#22222e] border border-[#2e2e3a] rounded-lg px-3 py-2 text-sm text-[#e8e6f0] focus:outline-none focus:border-[#7c6dfa] transition-colors"
-              />
+      {/* Add Transaction Dialog */}
+      <Dialog
+        open={showForm}
+        onOpenChange={(open) => {
+          if (!open) { setShowForm(false); setForm(EMPTY_FORM) }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>New Transaction</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleFormSubmit} id="tx-form">
+            <div className="grid grid-cols-3 gap-4 py-4">
+              {(
+                [
+                  { key: 'symbol', label: 'Symbol', type: 'text', placeholder: 'NVDA' },
+                  { key: 'company_name', label: 'Company Name', type: 'text', placeholder: 'NVIDIA Corporation' },
+                  { key: 'trade_date', label: 'Trade Date', type: 'date' },
+                  { key: 'settlement_date', label: 'Settlement Date', type: 'date' },
+                  { key: 'quantity', label: 'Quantity', type: 'number', step: 'any' },
+                  { key: 'traded_price', label: 'Price', type: 'number', step: 'any' },
+                  { key: 'gross_amount', label: 'Gross Amount', type: 'number', step: 'any' },
+                  { key: 'commission', label: 'Commission', type: 'number', step: 'any' },
+                  { key: 'net_amount', label: 'Net Amount', type: 'number', step: 'any' },
+                ] as const
+              ).map(({ key, label, type, ...rest }) => (
+                <div key={key} className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">{label}</label>
+                  <Input
+                    type={type}
+                    value={form[key] as string | number}
+                    onChange={(e) =>
+                      setField(
+                        key,
+                        type === 'number' ? parseFloat(e.target.value) || 0 : (e.target.value as never),
+                      )
+                    }
+                    required
+                    {...rest}
+                  />
+                </div>
+              ))}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Action</label>
+                <Select
+                  value={form.action}
+                  onValueChange={(v) => setField('action', v as TransactionAction)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BUY">BUY</SelectItem>
+                    <SelectItem value="SELL">SELL</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          ))}
-          <div>
-            <label className="block text-xs text-[#9997aa] mb-1">Action</label>
-            <select
-              value={form.action}
-              onChange={(e) => setField('action', e.target.value as TransactionAction)}
-              className="w-full bg-[#22222e] border border-[#2e2e3a] rounded-lg px-3 py-2 text-sm text-[#e8e6f0] focus:outline-none focus:border-[#7c6dfa]"
-            >
-              <option value="BUY">BUY</option>
-              <option value="SELL">SELL</option>
-            </select>
-          </div>
-          <div className="col-span-3 flex gap-3 pt-2">
-            <button
-              type="submit"
-              disabled={createTx.isPending}
-              className="px-4 py-2 bg-[#7c6dfa] hover:bg-[#9488fb] disabled:opacity-50 text-white text-sm rounded-lg transition-colors"
-            >
-              {createTx.isPending ? 'Saving…' : 'Save Transaction'}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowForm(false); setForm(EMPTY_FORM) }}
-              className="px-4 py-2 text-sm text-[#9997aa] hover:text-[#e8e6f0] transition-colors"
-            >
+          </form>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowForm(false); setForm(EMPTY_FORM) }}>
               Cancel
-            </button>
-          </div>
-        </form>
-      )}
+            </Button>
+            <Button type="submit" form="tx-form" disabled={createTx.isPending}>
+              {createTx.isPending ? 'Saving...' : 'Save Transaction'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Table */}
-      <div className="bg-[#17171f] border border-[#2e2e3a] rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              {table.getHeaderGroups().map((hg) => (
-                <tr key={hg.id} className="border-b border-[#2e2e3a]">
-                  {hg.headers.map((h) => (
-                    <th
-                      key={h.id}
-                      className={`px-4 py-3 text-left text-xs text-[#5e5c6e] uppercase tracking-wider font-medium whitespace-nowrap ${
-                        h.column.getCanSort() ? 'cursor-pointer select-none hover:text-[#9997aa]' : ''
-                      }`}
-                      onClick={h.column.getToggleSortingHandler()}
-                    >
-                      <span className="inline-flex items-center gap-1">
-                        {flexRender(h.column.columnDef.header, h.getContext())}
-                        {h.column.getCanSort() && (
-                          <span className="text-[#3e3e4e]">
-                            {h.column.getIsSorted() === 'asc' ? '↑' : h.column.getIsSorted() === 'desc' ? '↓' : '↕'}
-                          </span>
-                        )}
-                      </span>
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody>
-              {isLoading
-                ? Array.from({ length: 8 }).map((_, i) => (
-                    <tr key={i} className="border-b border-[#2e2e3a]/50">
-                      {columns.map((_, ci) => (
-                        <td key={ci} className="px-4 py-3">
-                          <div className="h-4 bg-[#22222e] rounded animate-pulse w-24" />
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                : table.getRowModel().rows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className="border-b border-[#2e2e3a]/50 hover:bg-[#1e1e28] transition-colors"
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="px-4 py-3 text-[#e8e6f0] whitespace-nowrap">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((hg) => (
+              <TableRow key={hg.id}>
+                {hg.headers.map((h) => (
+                  <TableHead
+                    key={h.id}
+                    className={`text-xs uppercase tracking-wider whitespace-nowrap ${
+                      h.column.getCanSort() ? 'cursor-pointer select-none hover:text-foreground' : ''
+                    }`}
+                    onClick={h.column.getToggleSortingHandler()}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {flexRender(h.column.columnDef.header, h.getContext())}
+                      {h.column.getCanSort() && (
+                        <span className="text-muted-foreground/50">
+                          {h.column.getIsSorted() === 'asc' ? '▲' : h.column.getIsSorted() === 'desc' ? '▼' : '•'}
+                        </span>
+                      )}
+                    </span>
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {isLoading
+              ? Array.from({ length: 8 }).map((_, i) => (
+                  <TableRow key={i}>
+                    {columns.map((_, ci) => (
+                      <TableCell key={ci}>
+                        <Skeleton className="h-4 w-24" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              : table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="whitespace-nowrap">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+          </TableBody>
+        </Table>
 
-        {/* Pagination */}
+        {/* Pagination ” daisyUI join */}
         {!isLoading && totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[#2e2e3a] text-xs text-[#9997aa]">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border text-xs text-muted-foreground">
             <span>
-              Page {page} of {totalPages} · {data?.total} transactions
+              Page {page} of {totalPages} total {data?.total} transactions
             </span>
-            <div className="flex gap-1">
+            <div className="join">
               <button
+                className="join-item btn btn-xs"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-2 py-1 rounded bg-[#22222e] disabled:opacity-40 hover:bg-[#2e2e3a] transition-colors"
               >
-                ‹
+                Previous
               </button>
               <button
+                className="join-item btn btn-xs"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-2 py-1 rounded bg-[#22222e] disabled:opacity-40 hover:bg-[#2e2e3a] transition-colors"
               >
-                ›
+                Next
               </button>
             </div>
           </div>
@@ -402,3 +410,4 @@ export function TransactionsPage() {
     </div>
   )
 }
+
