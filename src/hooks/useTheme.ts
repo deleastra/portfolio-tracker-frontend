@@ -6,8 +6,10 @@ const THEME_CYCLE: Theme[] = ["light", "dark", "pastel"]
 
 function applyTheme(theme: Theme) {
   const root = document.documentElement
-  root.classList.remove("dark", "pastel")
-  if (theme === "dark") root.classList.add("dark")
+  // Dark is the CSS default (:root), so it needs no extra class.
+  // Light and pastel need their own class applied.
+  root.classList.remove("light", "pastel")
+  if (theme === "light") root.classList.add("light")
   else if (theme === "pastel") root.classList.add("pastel")
   root.setAttribute("data-theme", theme)
 }
@@ -15,7 +17,7 @@ function applyTheme(theme: Theme) {
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>(() => {
     const stored = localStorage.getItem("theme") as Theme | null
-    return stored ?? "light"
+    return stored ?? "dark"
   })
 
   useEffect(() => {
