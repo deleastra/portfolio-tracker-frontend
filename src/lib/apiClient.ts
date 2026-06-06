@@ -2,7 +2,6 @@ import { api } from '@/lib/api'
 import type {
   LoginRequest,
   RegisterRequest,
-  AuthResponse,
   PortfolioSummary,
   TransactionListResponse,
   CreateTransactionRequest,
@@ -15,11 +14,13 @@ import type {
 // ── Auth ─────────────────────────────────────────────────────────────────────
 export const authApi = {
   login: (body: LoginRequest) =>
-    api.post<AuthResponse>('/auth/login', body).then((r) => r.data),
+    api.post<{ access_token: string }>('/auth/login', body).then((r) => r.data),
   register: (body: RegisterRequest) =>
-    api.post<AuthResponse>('/auth/register', body).then((r) => r.data),
-  refresh: (refresh_token: string) =>
-    api.post<AuthResponse>('/auth/refresh', { refresh_token }).then((r) => r.data),
+    api.post<{ access_token: string; id: string; email: string }>('/auth/register', body).then((r) => r.data),
+  refresh: () =>
+    api.post<{ access_token: string }>('/auth/refresh').then((r) => r.data),
+  logout: () =>
+    api.post('/auth/logout').then((r) => r.data),
 }
 
 // ── Portfolio ─────────────────────────────────────────────────────────────────
@@ -28,6 +29,8 @@ export const portfolioApi = {
     api.get<PortfolioSummary>('/portfolio/summary').then((r) => r.data),
   getPnL: () =>
     api.get<PnLSummary>('/analytics/pnl').then((r) => r.data),
+  getQuote: (symbol: string) =>
+    api.get<{ symbol: string; company_name: string; price: number; currency: string }>(`/portfolio/quote/${encodeURIComponent(symbol)}`).then((r) => r.data),
 }
 
 // ── Transactions ─────────────────────────────────────────────────────────────
@@ -38,6 +41,8 @@ export const transactionApi = {
       .then((r) => r.data),
   create: (body: CreateTransactionRequest) =>
     api.post('/transactions', body).then((r) => r.data),
+  update: (id: string, body: CreateTransactionRequest) =>
+    api.put(`/transactions/${id}`, body).then((r) => r.data),
   delete: (id: string) => api.delete(`/transactions/${id}`).then((r) => r.data),
   importCsv: (file: File) => {
     const form = new FormData()
