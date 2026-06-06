@@ -224,14 +224,18 @@ export function AnalyticsPage() {
   return (
     <div className="space-y-6">
       {/* Controls */}
-      <div className="flex items-center gap-4">
-        {/* Range tabs — daisyUI */}
-        <div className="tabs tabs-boxed bg-card border border-border">
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Range pills */}
+        <div className="flex gap-1">
           {RANGES.map((r, i) => (
             <button
               key={r.label}
               onClick={() => setRangeIdx(i)}
-              className={`tab text-xs ${rangeIdx === i ? 'tab-active' : ''}`}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border ${
+                rangeIdx === i
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'
+              }`}
             >
               {r.label}
             </button>
@@ -266,7 +270,7 @@ export function AnalyticsPage() {
             No performance data for this period.
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={280}>
+          <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis
@@ -317,22 +321,24 @@ export function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      {/* Metrics grid */}
-      <div className="grid grid-cols-3 gap-4 lg:grid-cols-5">
+      {/* Metrics grid — row 1 */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <MetricCard label="Total Return" value={m?.total_return_pct} suffix="%" green={(m?.total_return_pct ?? 0) >= 0} />
         <MetricCard label="Benchmark Return" value={m?.benchmark_return_pct} suffix="%" green={(m?.benchmark_return_pct ?? 0) >= 0} />
         <MetricCard label="Alpha" value={m?.alpha} suffix="%" green={(m?.alpha ?? 0) >= 0} />
         <MetricCard label="Beta" value={m?.beta} />
         <MetricCard label="Sharpe Ratio" value={m?.sharpe_ratio} green={(m?.sharpe_ratio ?? 0) >= 1} />
       </div>
-      <div className="grid grid-cols-3 gap-4 lg:grid-cols-5">
+      {/* Metrics grid — row 2 */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <MetricCard label="Sortino Ratio" value={m?.sortino_ratio} green={(m?.sortino_ratio ?? 0) >= 1} />
         <MetricCard label="Max Drawdown" value={m?.max_drawdown} suffix="%" green={(m?.max_drawdown ?? 0) >= 0} />
         <MetricCard label="Calmar Ratio" value={m?.calmar_ratio} green={(m?.calmar_ratio ?? 0) >= 0} />
         <MetricCard label="Information Ratio" value={m?.information_ratio} green={(m?.information_ratio ?? 0) >= 0} />
         <MetricCard label="Treynor Ratio" value={m?.treynor_ratio} green={(m?.treynor_ratio ?? 0) >= 0} />
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      {/* Metrics grid — row 3 */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <MetricCard label="Tracking Error" value={m?.tracking_error} suffix="%" />
         <MetricCard label="Win Rate" value={m?.win_rate} suffix="%" green={(m?.win_rate ?? 0) >= 50} />
         <MetricCard label="Profit Factor" value={m?.profit_factor} green={(m?.profit_factor ?? 0) >= 1} />
@@ -584,13 +590,18 @@ function HoldingsPerformance() {
               const pct = maxAbs > 0 ? (Math.abs(value) / maxAbs) * 100 : 0
               const isPositive = value >= 0
               return (
-                <div key={entry.symbol} className="flex items-center gap-3 group">
+                <div key={entry.symbol} className="flex items-center gap-2 group">
                   {/* Ticker */}
-                  <div className="w-12 text-right text-xs font-medium text-muted-foreground shrink-0">
+                  <div className="w-12 text-right text-xs font-medium text-foreground shrink-0">
                     {entry.symbol}
                   </div>
-                  {/* Bar track */}
+                  {/* Leader + Bar track */}
                   <div className="flex-1 h-5 relative">
+                    {/* Leader line */}
+                    <div className="absolute inset-0 flex items-center pointer-events-none">
+                      <div className="w-full border-b border-dashed border-border/50" />
+                    </div>
+                    {/* Bar */}
                     <div
                       className={`absolute top-0 left-0 h-full rounded-sm transition-all ${
                         isPositive ? 'bg-success/70' : 'bg-destructive/70'
@@ -598,7 +609,7 @@ function HoldingsPerformance() {
                       style={{ width: `${pct}%` }}
                     />
                     {!entry.is_open && (
-                      <span className="absolute right-0 top-0 h-full flex items-center pr-1 text-[10px] text-muted-foreground">
+                      <span className="absolute right-0 top-0 h-full flex items-center pr-1 text-[10px] text-muted-foreground/60 z-10">
                         closed
                       </span>
                     )}

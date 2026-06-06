@@ -7,6 +7,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/react-table'
+import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { usePortfolioSummary } from '@/hooks/usePortfolio'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -136,15 +137,17 @@ export function PortfolioPage() {
 
   return (
     <div className="space-y-6">
-      {/* Hero metrics — daisyUI stats */}
-      <div className="stats stats-horizontal shadow w-full border border-border bg-card">
+      {/* Hero metrics — responsive Card grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {metrics.map(({ label, value }) => (
-          <div key={label} className="stat">
-            <div className="stat-title text-xs uppercase tracking-wider">{label}</div>
-            <div className="stat-value text-xl font-semibold text-foreground">
-              {value ?? <Skeleton className="h-6 w-24" />}
-            </div>
-          </div>
+          <Card key={label} className="bg-card">
+            <CardContent className="p-4">
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">{label}</div>
+              <div className="text-lg font-semibold text-foreground leading-tight">
+                {value ?? <Skeleton className="h-6 w-24" />}
+              </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
@@ -157,25 +160,26 @@ export function PortfolioPage() {
           {isError ? (
             <div className="p-6 text-sm text-destructive">Failed to load portfolio data.</div>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((hg) => (
-                  <TableRow key={hg.id}>
+                  <TableRow key={hg.id} className="bg-muted/30 hover:bg-muted/30">
                     {hg.headers.map((h) => (
                       <TableHead
                         key={h.id}
-                        className={`text-xs uppercase tracking-wider whitespace-nowrap ${h.column.getCanSort() ? 'cursor-pointer select-none hover:text-foreground' : ''}`}
+                        className={`text-[11px] uppercase tracking-wider whitespace-nowrap ${h.column.getCanSort() ? 'cursor-pointer select-none hover:text-foreground' : ''}`}
                         onClick={h.column.getToggleSortingHandler()}
                       >
                         <span className="inline-flex items-center gap-1">
                           {flexRender(h.column.columnDef.header, h.getContext())}
                           {h.column.getCanSort() && (
-                            <span className="text-muted-foreground/50">
+                            <span className="text-muted-foreground/40">
                               {h.column.getIsSorted() === 'asc'
-                                ? '▲'
+                                ? <ChevronUp className="h-3 w-3" />
                                 : h.column.getIsSorted() === 'desc'
-                                  ? '▼'
-                                  : '•'}
+                                  ? <ChevronDown className="h-3 w-3" />
+                                  : <ChevronsUpDown className="h-3 w-3" />}
                             </span>
                           )}
                         </span>
@@ -203,7 +207,7 @@ export function PortfolioPage() {
                   </TableRow>
                 ) : (
                   table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
+                    <TableRow key={row.id} className="hover:bg-muted/20 transition-colors border-b border-border/50">
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id} className="whitespace-nowrap">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -214,6 +218,7 @@ export function PortfolioPage() {
                 )}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
