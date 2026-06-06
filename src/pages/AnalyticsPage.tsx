@@ -116,9 +116,8 @@ const METRIC_INFO: Record<string, MetricInfoData> = {
 
 
 const BENCHMARKS: { value: Benchmark; label: string }[] = [
-  { value: 'SPY', label: 'S&P 500 (SPY)' },
+  { value: '^GSPC', label: 'S&P 500' },
   { value: '^IXIC', label: 'Nasdaq Composite' },
-  { value: '^NDX', label: 'Nasdaq-100' },
 ]
 
 const RANGES = [
@@ -205,7 +204,7 @@ function MetricCard({ label, value, suffix = '', green }: {
 }
 
 export function AnalyticsPage() {
-  const [benchmark, setBenchmark] = useState<Benchmark>('SPY')
+  const [benchmark, setBenchmark] = useState<Benchmark>('^GSPC')
   const [rangeIdx, setRangeIdx] = useState(3) // default YTD
   const { from, to } = getDateRange(RANGES[rangeIdx].months)
 
