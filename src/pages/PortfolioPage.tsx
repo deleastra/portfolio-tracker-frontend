@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+﻿import { useState, useCallback } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -7,11 +7,13 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/react-table'
-import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUpDown, Download } from 'lucide-react'
 import { usePortfolioSummary } from '@/hooks/usePortfolio'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
+import { portfolioApi } from '@/lib/apiClient'
 import type { Position } from '@/types'
 
 function fmt(n: number | undefined | null, decimals = 2) {
@@ -99,6 +101,16 @@ export function PortfolioPage() {
   const { data, isLoading, isError } = usePortfolioSummary()
   const [sorting, setSorting] = useState<SortingState>([{ id: 'weight_pct', desc: true }])
 
+  const handleExport = useCallback(async () => {
+    const blob = await portfolioApi.exportCsv()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `portfolio_${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [])
+
   const table = useReactTable({
     data: data?.positions ?? [],
     columns,
@@ -154,7 +166,19 @@ export function PortfolioPage() {
       {/* Holdings table */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">Holdings</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium">Holdings</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={!data?.positions?.length}
+              className="gap-1.5"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {isError ? (

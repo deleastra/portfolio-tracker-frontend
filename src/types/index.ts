@@ -28,6 +28,8 @@ export interface Position {
   weight_pct: number
   currency: string
   exchange: string
+  sector: string
+  entry_date: string
 }
 
 export interface PortfolioSummary {
@@ -104,7 +106,7 @@ export interface PnLSummary {
 }
 
 // Analytics
-export type Benchmark = 'SPY' | '^GSPC' | '^IXIC' | '^NDX'
+export type Benchmark = '^GSPC' | '^IXIC'
 
 export interface PerformancePoint {
   date: string
