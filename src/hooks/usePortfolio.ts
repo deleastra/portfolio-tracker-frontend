@@ -12,6 +12,34 @@ export function useSymbolQuote(symbol: string) {
   })
 }
 
+const MARKET_TICKERS = [
+  { symbol: '^GSPC', label: 'S&P 500' },
+  { symbol: '^IXIC', label: 'NASDAQ' },
+  { symbol: '^VIX', label: 'VIX' },
+  { symbol: 'GC=F', label: 'Gold' },
+] as const
+
+export function useMarketTickers() {
+  return useQuery({
+    queryKey: ['market', 'tickers'],
+    queryFn: async () => {
+      const results = await Promise.all(
+        MARKET_TICKERS.map(({ symbol, label }) =>
+          portfolioApi.getQuote(symbol).then((q) => ({
+            symbol,
+            label,
+            price: q.price,
+            day_change_pct: q.day_change_pct,
+          })).catch(() => ({ symbol, label, price: 0, day_change_pct: 0 }))
+        )
+      )
+      return results
+    },
+    staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000,
+  })
+}
+
 export function usePortfolioSummary() {
   return useQuery({
     queryKey: ['portfolio', 'summary'],

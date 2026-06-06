@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useLogout } from '@/hooks/useAuth'
 import { useTheme } from '@/hooks/useTheme'
+import { useMarketTickers } from '@/hooks/usePortfolio'
 import { Button } from '@/components/ui/button'
 
 const NAV_ITEMS = [
@@ -19,6 +20,7 @@ export function RootLayout() {
   const { location } = useRouterState()
   const { theme, toggleTheme } = useTheme()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { data: tickers } = useMarketTickers()
 
   const themeIcon = theme === 'dark'
     ? <Sun className="h-4 w-4" />
@@ -129,15 +131,15 @@ export function RootLayout() {
           </button>
           {/* Ticker */}
           <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/60 bg-background/50">
-              S&amp;P 500 <span className="text-success font-medium">+1.2%</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/60 bg-background/50">
-              NASDAQ <span className="text-success font-medium">+0.8%</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/60 bg-background/50">
-              NDX <span className="text-destructive font-medium">-0.2%</span>
-            </span>
+            {(tickers ?? []).map(({ symbol, label, price, day_change_pct }) => (
+              <span key={symbol} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/60 bg-background/50">
+                <span>{label}</span>
+                <span className="text-foreground font-medium">{price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span className={day_change_pct >= 0 ? 'text-success font-medium' : 'text-destructive font-medium'}>
+                  {day_change_pct >= 0 ? '+' : ''}{day_change_pct.toFixed(2)}%
+                </span>
+              </span>
+            ))}
           </div>
         </header>
 

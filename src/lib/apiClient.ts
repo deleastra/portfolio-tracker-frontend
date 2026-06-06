@@ -30,7 +30,7 @@ export const portfolioApi = {
   getPnL: () =>
     api.get<PnLSummary>('/analytics/pnl').then((r) => r.data),
   getQuote: (symbol: string) =>
-    api.get<{ symbol: string; company_name: string; price: number; currency: string }>(`/portfolio/quote/${encodeURIComponent(symbol)}`).then((r) => r.data),
+    api.get<{ symbol: string; company_name: string; price: number; day_change_pct: number; currency: string }>(`/portfolio/quote/${encodeURIComponent(symbol)}`).then((r) => r.data),
 }
 
 // ── Transactions ─────────────────────────────────────────────────────────────
