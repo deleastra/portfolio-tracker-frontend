@@ -1,5 +1,9 @@
+import { useState } from 'react'
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
-import { LogOut, Sun, Moon, BarChart3, ArrowLeftRight, PieChart, Sparkles } from 'lucide-react'
+import {
+  LogOut, Sun, Moon, BarChart3, ArrowLeftRight, PieChart,
+  Sparkles, BarChart2, Menu, X,
+} from 'lucide-react'
 import { useLogout } from '@/hooks/useAuth'
 import { useTheme } from '@/hooks/useTheme'
 import { Button } from '@/components/ui/button'
@@ -14,21 +18,58 @@ export function RootLayout() {
   const logout = useLogout()
   const { location } = useRouterState()
   const { theme, toggleTheme } = useTheme()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  const themeIcon = theme === 'dark'
+    ? <Sun className="h-4 w-4" />
+    : theme === 'light'
+    ? <Moon className="h-4 w-4" />
+    : <Sparkles className="h-4 w-4" />
+  const themeLabel = theme === 'dark' ? 'Light Mode' : theme === 'light' ? 'Dark Mode' : 'Pastel Mode'
 
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-foreground/30 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-56 flex-shrink-0 flex flex-col bg-card border-r border-border">
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col w-56 shrink-0 border-r border-border transition-transform duration-300 md:relative md:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+        style={{ backgroundColor: 'var(--sidebar-bg)' }}
+      >
         {/* Brand */}
-        <div className="px-6 py-5 border-b border-border">
-          <div className="text-sm text-muted-foreground font-medium tracking-widest uppercase">
-            Precision Ledger
+        <div className="px-5 py-5 border-b border-border flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-md bg-primary/20 flex items-center justify-center shrink-0">
+              <BarChart2 className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <div className="text-xs font-semibold tracking-widest uppercase text-foreground leading-none">
+                Precision Ledger
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-0.5 leading-none">
+                {theme === 'pastel' ? 'Happy Trading ✦' : 'Institutional Grade'}
+              </div>
+            </div>
           </div>
-          <div className="text-xs text-muted-foreground/60 mt-0.5">Institutional Grade</div>
+          <button
+            className="md:hidden text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close sidebar"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-0.5">
           {NAV_ITEMS.map(({ to, label, icon: Icon }) => {
             const active =
               to === '/'
@@ -38,13 +79,14 @@ export function RootLayout() {
               <Link
                 key={to}
                 to={to}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors cursor-pointer ${
                   active
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                    ? 'bg-primary/15 text-primary font-medium border-l-2 border-primary -ml-px pl-2.75'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground border-l-2 border-transparent -ml-px pl-2.75'
                 }`}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-4 w-4 shrink-0" />
                 {label}
               </Link>
             )
@@ -52,21 +94,21 @@ export function RootLayout() {
         </nav>
 
         {/* Theme toggle + Logout */}
-        <div className="px-3 py-4 border-t border-border space-y-1">
+        <div className="px-3 py-4 border-t border-border space-y-0.5">
           <Button
             variant="ghost"
             size="sm"
             onClick={toggleTheme}
-            className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
+            className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground cursor-pointer"
           >
-            {theme === 'dark' ? <Sun className="h-4 w-4" /> : theme === 'pastel' ? <Moon className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-            {theme === 'dark' ? 'Light Mode' : theme === 'pastel' ? 'Dark Mode' : 'Pastel Mode'}
+            {themeIcon}
+            {themeLabel}
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={logout}
-            className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive"
+            className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive cursor-pointer"
           >
             <LogOut className="h-4 w-4" /> Sign Out
           </Button>
@@ -74,21 +116,37 @@ export function RootLayout() {
       </aside>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top ticker bar */}
-        <header className="flex-shrink-0 flex items-center px-6 py-3 border-b border-border bg-card">
-          <div className="flex items-center gap-6 text-xs text-muted-foreground">
-            <span>S&P 500 <span className="text-success">+1.2%</span></span>
-            <span>NASDAQ <span className="text-success">+0.8%</span></span>
-            <span>^NDX <span className="text-destructive">-0.2%</span></span>
+      <div className="flex-1 flex flex-col overflow-hidden md:ml-0">
+        {/* Top ticker bar / header */}
+        <header className="shrink-0 flex items-center px-4 md:px-6 py-3 border-b border-border bg-card gap-4">
+          {/* Mobile hamburger */}
+          <button
+            className="md:hidden text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open sidebar"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          {/* Ticker */}
+          <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/60 bg-background/50">
+              S&amp;P 500 <span className="text-success font-medium">+1.2%</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/60 bg-background/50">
+              NASDAQ <span className="text-success font-medium">+0.8%</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/60 bg-background/50">
+              NDX <span className="text-destructive font-medium">-0.2%</span>
+            </span>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
           <Outlet />
         </main>
       </div>
     </div>
   )
 }
+
