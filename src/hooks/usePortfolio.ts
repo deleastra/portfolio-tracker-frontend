@@ -2,6 +2,16 @@ import { useQuery } from '@tanstack/react-query'
 import { portfolioApi, analyticsApi } from '@/lib/apiClient'
 import type { Benchmark } from '@/types'
 
+export function useSymbolQuote(symbol: string) {
+  return useQuery({
+    queryKey: ['quote', symbol],
+    queryFn: () => portfolioApi.getQuote(symbol),
+    enabled: symbol.length >= 1,
+    staleTime: 60_000,
+    retry: false,
+  })
+}
+
 export function usePortfolioSummary() {
   return useQuery({
     queryKey: ['portfolio', 'summary'],

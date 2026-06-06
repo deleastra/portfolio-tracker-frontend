@@ -27,6 +27,19 @@ export function useCreateTransaction() {
   })
 }
 
+export function useUpdateTransaction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: CreateTransactionRequest }) =>
+      transactionApi.update(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+      qc.invalidateQueries({ queryKey: ['portfolio'] })
+      qc.invalidateQueries({ queryKey: ['analytics'] })
+    },
+  })
+}
+
 export function useDeleteTransaction() {
   const qc = useQueryClient()
   return useMutation({
